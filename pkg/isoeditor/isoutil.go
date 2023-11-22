@@ -167,7 +167,28 @@ func Create(outPath string, workDir string, volumeLabel string) error {
 				},
 			},
 		}
-	}
+	}else if exists, _ := fileExists(filepath.Join(workDir, "images/cdboot.img")); exists {
+               // Creating an ISO for S390 boot:
+               cdbootSectors, err := cdbootLoadSectors(workDir)
+               if err != nil {
+                       return err
+               }
+               if exists, _ := fileExists(filepath.Join(workDir, "boot.catalog")); !exists {
+                       return fmt.Errorf("missing boot.catalog file")
+               }
+               options.ElTorito = &iso9660.ElTorito{
+                       BootCatalog:     "boot.catalog",
+                       HideBootCatalog: true,
+                       Entries: []*iso9660.ElToritoEntry{
+                               {
+                                       Platform:  iso9660.BIOS,
+                                       Emulation: iso9660.NoEmulation,
+                                       BootFile:  "images/cdboot.img",
+                                       LoadSize:  cdbootSectors,
+                               },
+                       },
+               }
+        }
 
 	return iso.Finalize(options)
 }
@@ -180,6 +201,14 @@ func efiLoadSectors(workDir string) (uint16, error) {
 		return 0, err
 	}
 	return uint16(math.Ceil(float64(efiStat.Size()) / 2048)), nil
+}
+
+func cdbootLoadSectors(workDir string) (uint16, error) {
+       cdbootStat, err := os.Stat(filepath.Join(workDir, "images/cdboot.img"))
+       if err != nil {
+               return 0, err
+       }
+       return uint16(math.Ceil(float64(cdbootStat.Size()) / 2048)), nil
 }
 
 func haveBootFiles(workDir string) (bool, error) {
