@@ -1,4 +1,4 @@
-module github.com/v78singh/openshift/assisted-image-service
+module github.com/v78singh/assisted-image-service
 
 go 1.17
 
